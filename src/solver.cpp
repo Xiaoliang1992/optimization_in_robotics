@@ -53,6 +53,10 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
     if (dx_.norm() < param_.terminate_threshold) {
       break;
     }
+
+    // info
+    info_.obj_val.push_back(problem_ptr_->GetObjective(x_));
+    info_.iter_vec.push_back(iter_);
   }
 
   return x_;

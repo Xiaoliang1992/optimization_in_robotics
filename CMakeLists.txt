@@ -7,8 +7,11 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
+find_package(PythonLibs REQUIRED)
+
 include_directories(
   ${EIGEN3_INCLUDE_DIRS}
+  ${PYTHON_INCLUDE_DIRS}
   ${CMAKE_CURRENT_LIST_DIR}/include)
 
 file(GLOB_RECURSE CPP_FILES src/*.cpp)
@@ -20,4 +23,5 @@ add_executable(test_problem ${CMAKE_CURRENT_LIST_DIR}/test/test_problem.cpp)
 target_link_libraries(test_problem PRIVATE ${PROJECT_NAME})
 
 add_executable(test_solver ${CMAKE_CURRENT_LIST_DIR}/test/test_solver.cpp)
-target_link_libraries(test_solver PRIVATE ${PROJECT_NAME})
+target_link_libraries(test_solver PRIVATE ${PROJECT_NAME} ${PYTHON_LIBRARIES})
+

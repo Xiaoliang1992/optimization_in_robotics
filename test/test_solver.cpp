@@ -1,3 +1,4 @@
+#include "matplotlibcpp.h"
 #include "problem.h"
 #include "solver.h"
 #include <chrono>
@@ -5,6 +6,7 @@
 
 using namespace std;
 using namespace optimization_solver;
+using namespace matplotlibcpp;
 
 int main() {
 
@@ -26,6 +28,10 @@ int main() {
        << " ms\n"
        << "solution = \n"
        << x << endl;
+
+  figure();
+  plot(solver_ptr->GetInfoPtr()->iter_vec, solver_ptr->GetInfoPtr()->obj_val);
+  show();
 
   return 0;
 }

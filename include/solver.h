@@ -5,6 +5,7 @@
 #include <eigen3/Eigen/Core>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 namespace optimization_solver {
 enum SolverType {
@@ -19,6 +20,16 @@ struct SolverParameters {
 };
 
 // solver base
+
+struct SolverDebugInfo {
+  std::vector<Eigen::VectorXd> x_vec;
+  std::vector<Eigen::VectorXd> dx_vec;
+  std::vector<Eigen::VectorXd> g_vec;
+  std::vector<double> tau_vec;
+  std::vector<double> obj_val;
+  std::vector<int> iter_vec;
+};
+
 class Solver {
 public:
   virtual void SetProblem(const ProblemType &type) final;
@@ -27,6 +38,7 @@ public:
 
   virtual Eigen::VectorXd Getx() final { return x_; }
   virtual Eigen::VectorXd Getg() final { return g_; }
+  virtual SolverDebugInfo *GetInfoPtr() final { return &info_; }
   virtual int GetIter() final { return iter_; }
 
 protected:
@@ -39,6 +51,8 @@ protected:
   Eigen::VectorXd ub_; // upper bound
   double tau_ = 0.0;   // step size
   int iter_ = 0;       // iter time
+
+  SolverDebugInfo info_; // debug info
 };
 
 // line-search steepest gradient descent with Armijo condition
