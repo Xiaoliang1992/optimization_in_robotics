@@ -34,6 +34,9 @@ class Solver {
 public:
   virtual void SetProblem(const ProblemType &type) final;
   virtual void SetParam(const SolverParameters &param) final;
+  virtual double LineSearch(const Eigen::VectorXd &d, const double c,
+                            const double tau_init, const Eigen::VectorXd &x,
+                            const Eigen::VectorXd &g) final;
   virtual Eigen::VectorXd Solve(const Eigen::VectorXd &x0) = 0;
 
   virtual Eigen::VectorXd Getx() final { return x_; }
@@ -59,6 +62,19 @@ protected:
 class GradientDescent : public Solver {
 public:
   GradientDescent() {}
+  Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
+};
+
+// NewtonsMethod with linesearch
+class NewtonsMethod : public Solver {
+public:
+  NewtonsMethod() {}
+  Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
+};
+
+class QuasiNewtonsMethod : public Solver {
+public:
+  QuasiNewtonsMethod() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
 };
 

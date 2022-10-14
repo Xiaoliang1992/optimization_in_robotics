@@ -24,10 +24,10 @@ int main() {
           .count();
   double t_cost = elapsed / 1e6;
 
-  cout << "iter = " << solver_ptr->GetIter() << ", time cost = " << t_cost
-       << " ms\n"
-       << "solution = \n"
-       << x << endl;
+  cout << "solution = \n"
+       << x << "\niter = " << solver_ptr->GetIter() << ", \ntime cost = " << t_cost
+       << " ms"
+       << endl;
 
   figure();
   plot(solver_ptr->GetInfoPtr()->iter_vec, solver_ptr->GetInfoPtr()->obj_val);

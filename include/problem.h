@@ -16,8 +16,8 @@ class Problem {
 public:
   virtual double GetObjective(const Eigen::VectorXd &x) = 0;
   virtual Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) = 0;
-  virtual Eigen::VectorXd GetNumGradient(const Eigen::VectorXd &x) final;
-  virtual Eigen::MatrixXd GetNumHessian(const Eigen::VectorXd &x) final;
+  virtual Eigen::VectorXd GetDiffGradient(const Eigen::VectorXd &x) final;
+  virtual Eigen::MatrixXd GetDiffHessian(const Eigen::VectorXd &x) final;
 
 protected:
   int size_ = 0;

@@ -21,6 +21,22 @@ void Solver::SetProblem(const ProblemType &type) {
   }
 }
 
+double Solver::LineSearch(const Eigen::VectorXd &d, const double c,
+                          const double tau_init, const Eigen::VectorXd &x,
+                          const Eigen::VectorXd &g) {
+  double tau = tau_init;
+  double f0 = problem_ptr_->GetObjective(x);
+  double f1 = problem_ptr_->GetObjective(x + tau * d);
+
+  // Armijo condition for backtracking line search
+  while (f1 > f0 + c * tau * d.transpose() * g) {
+    tau *= 0.5;
+    f1 = problem_ptr_->GetObjective(x + tau * d);
+  }
+
+  return tau;
+}
+
 // line-search steepest gradient descent with Armijo condition
 Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
   x_ = x0;
@@ -32,15 +48,7 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
     g_ = problem_ptr_->GetGradient(x_);
 
     Eigen::VectorXd d = -g_;
-    double f0 = problem_ptr_->GetObjective(x_);
-    double f1 = problem_ptr_->GetObjective(x_ + tau_ * d);
-
-    // Armijo condition for backtracking line search
-    while (f1 > f0 + param_.c * tau_ * d.transpose() * g_) {
-      tau_ *= 0.5;
-      f0 = problem_ptr_->GetObjective(x_);
-      f1 = problem_ptr_->GetObjective(x_ + tau_ * d);
-    }
+    tau_ = LineSearch(d, param_.c, tau_, x_, g_);
 
 #ifdef SOLVER_DEBUG
     std::cout << "iter = " << iter_ << ", tau = " << tau_

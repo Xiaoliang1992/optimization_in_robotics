@@ -17,8 +17,8 @@ int main() {
     problem_ptr->GetObjective(x);
 
     cout
-        << "norm(GetNumGradient - GetGradient) = "
-        << (problem_ptr->GetNumGradient(x) - problem_ptr->GetGradient(x)).norm()
+        << "norm(GetDiffGradient - GetGradient) = "
+        << (problem_ptr->GetDiffGradient(x) - problem_ptr->GetGradient(x)).norm()
         << endl;
   }
 

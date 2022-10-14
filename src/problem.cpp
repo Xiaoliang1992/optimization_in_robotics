@@ -6,7 +6,7 @@ namespace optimization_solver {
 static const double eps_value = 1e-5;
 
 // base problem
-Eigen::VectorXd Problem::GetNumGradient(const Eigen::VectorXd &x) {
+Eigen::VectorXd Problem::GetDiffGradient(const Eigen::VectorXd &x) {
   int size = x.size();
   Eigen::VectorXd g = Eigen::VectorXd::Zero(size);
   Eigen::VectorXd dxi = Eigen::VectorXd::Zero(size);
@@ -19,7 +19,7 @@ Eigen::VectorXd Problem::GetNumGradient(const Eigen::VectorXd &x) {
   return g;
 }
 
-Eigen::MatrixXd Problem::GetNumHessian(const Eigen::VectorXd &x) {
+Eigen::MatrixXd Problem::GetDiffHessian(const Eigen::VectorXd &x) {
   int size = x.size();
   Eigen::MatrixXd h(size, size);
   Eigen::VectorXd dxi = Eigen::VectorXd::Zero(size);
