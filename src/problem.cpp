@@ -40,6 +40,14 @@ Eigen::MatrixXd Problem::GetDiffHessian(const Eigen::VectorXd &x) {
   return h;
 }
 
+Eigen::VectorXd Problem::GetGradient(const Eigen::VectorXd &x) {
+  return GetDiffGradient(x);
+}
+
+Eigen::MatrixXd Problem::GetHessian(const Eigen::VectorXd &x) {
+  return GetDiffHessian(x);
+}
+
 // RosenbrockFunction problem
 double RosenbrockFunction::GetObjective(const Eigen::VectorXd &x) {
   if (x.size() != N) {
@@ -58,7 +66,7 @@ double RosenbrockFunction::GetObjective(const Eigen::VectorXd &x) {
 }
 
 Eigen::VectorXd RosenbrockFunction::GetGradient(const Eigen::VectorXd &x) {
-  int size = x.size();
+  auto size = x.size();
   Eigen::VectorXd g(size);
 
   for (size_t i = 1; i <= N / 2; ++i) {
@@ -69,6 +77,32 @@ Eigen::VectorXd RosenbrockFunction::GetGradient(const Eigen::VectorXd &x) {
   }
 
   return g;
+}
+
+Eigen::MatrixXd RosenbrockFunction::GetHessian(const Eigen::VectorXd &x) {
+  auto size = x.size();
+  Eigen::MatrixXd H(size, size);
+  H.setZero();
+
+  for (size_t i = 1; i <= N / 2; ++i) {
+    H(2 * i - 2, 2 * i - 2) =
+        1200.0 * std::pow(x(2 * i - 2), 2) - 400.0 * x(2 * i - 1) + 2.0;
+    H(2 * i - 2, 2 * i - 1) = -400.0 * x(2 * i - 2);
+
+    H(2 * i - 1, 2 * i - 1) = 200.0;
+    H(2 * i - 1, 2 * i - 2) = -400.0 * x(2 * i - 2);
+  }
+
+  return H;
+}
+
+// example1: f(x1, x2) = exp(x1 + 3x2 - 0.1) + exp(x1 - 3x2 - 0.1) + exp(-x1 -
+// 0.1)
+double Example1Func::GetObjective(const Eigen::VectorXd &x) {
+  double y = std::exp(x(0) + 3.0 * x(1) - 0.1) +
+             std::exp(x(0) - 3.0 * x(1) - 0.1) + std::exp(-x(0) - 0.1);
+
+  return y;
 }
 
 } // namespace optimization_solver

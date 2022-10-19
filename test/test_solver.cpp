@@ -10,8 +10,8 @@ using namespace matplotlibcpp;
 
 int main() {
 
-  shared_ptr<Solver> solver_ptr = make_shared<GradientDescent>();
-  solver_ptr->SetProblem(ProblemType::PRosenbrock);
+  shared_ptr<Solver> solver_ptr = make_shared<NewtonsMethod>();
+  solver_ptr->SetProblem(ProblemType::Example1);
   Eigen::VectorXd x(N);
   x.setZero();
 
@@ -25,9 +25,8 @@ int main() {
   double t_cost = elapsed / 1e6;
 
   cout << "solution = \n"
-       << x << "\niter = " << solver_ptr->GetIter() << ", \ntime cost = " << t_cost
-       << " ms"
-       << endl;
+       << x << "\niter = " << solver_ptr->GetIter()
+       << ", \ntime cost = " << t_cost << " ms" << endl;
 
   figure();
   plot(solver_ptr->GetInfoPtr()->iter_vec, solver_ptr->GetInfoPtr()->obj_val);

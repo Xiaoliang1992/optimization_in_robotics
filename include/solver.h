@@ -13,8 +13,8 @@ enum SolverType {
 };
 
 struct SolverParameters {
-  int max_iter = 5000;               // max iteration time
-  double c = 0.4;                    // c
+  int max_iter = 50;              // max iteration time
+  double c = 0.001;                  // c
   double tau_init = 1.0;             // init step size
   double terminate_threshold = 1e-6; // iteration terminate threshold
 };
@@ -49,11 +49,14 @@ protected:
   SolverParameters param_;               // parameters
   Eigen::VectorXd x_;                    // iterative optimization variables
   Eigen::VectorXd dx_; // iterative optimization variables increments
+  Eigen::MatrixXd H_;  // hessian matrix
+  Eigen::MatrixXd M_;  // PSD matrix M = H + alpha * I
   Eigen::VectorXd g_;  // gradient
   Eigen::VectorXd lb_; // lower bound
   Eigen::VectorXd ub_; // upper bound
-  double tau_ = 0.0;   // step size
-  int iter_ = 0;       // iter time
+  double alpha_ = 0.0;
+  double tau_ = 0.0; // step size
+  int iter_ = 0;     // iter time
 
   SolverDebugInfo info_; // debug info
 };

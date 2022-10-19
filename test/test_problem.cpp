@@ -16,10 +16,15 @@ int main() {
 
     problem_ptr->GetObjective(x);
 
-    cout
-        << "norm(GetDiffGradient - GetGradient) = "
-        << (problem_ptr->GetDiffGradient(x) - problem_ptr->GetGradient(x)).norm()
-        << endl;
+    cout << "norm(GetDiffGradient - GetGradient) = "
+         << (problem_ptr->GetDiffGradient(x) - problem_ptr->GetGradient(x))
+                .norm()
+         << endl;
+
+    cout << "norm(GetDiffHessian - GetHessian) = "
+         << (problem_ptr->GetDiffHessian(x) - problem_ptr->GetHessian(x))
+                .norm()
+         << endl;
   }
 
   return 0;
