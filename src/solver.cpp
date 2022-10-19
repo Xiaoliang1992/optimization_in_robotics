@@ -6,6 +6,8 @@
 #include <memory>
 
 #define SOLVER_DEBUG
+
+using namespace std;
 namespace optimization_solver {
 
 // solver base
@@ -42,6 +44,20 @@ double Solver::LineSearch(const Eigen::VectorXd &d, const double c,
   return tau;
 }
 
+void Solver::BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
+                  const Eigen::VectorXd &dg) {
+
+  Eigen::MatrixXd eye;
+  eye.setIdentity(dx.size(), dx.size());
+
+  Eigen::MatrixXd dx_dgT = dx * dg.transpose();
+
+  double dxT_dg = dx.dot(dg);
+
+  B = (eye - dx_dgT / dxT_dg) * B * (eye - dx_dgT / dxT_dg) +
+      dx * dx.transpose() / dxT_dg;
+}
+
 // line-search steepest gradient descent with Armijo condition
 Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
   x_ = x0;
@@ -49,19 +65,19 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
 
   for (int i = 0; i < param_.max_iter; ++i) {
     iter_++;
-    tau_ = param_.tau_init;
+    t_ = param_.tau_init;
     g_ = problem_ptr_->GetGradient(x_);
 
     Eigen::VectorXd d = -g_;
-    tau_ = LineSearch(d, param_.c, tau_, x_, g_);
+    t_ = LineSearch(d, param_.c, t_, x_, g_);
 
 #ifdef SOLVER_DEBUG
-    std::cout << "iter = " << iter_ << ", tau = " << tau_
+    std::cout << "iter = " << iter_ << ", tau = " << t_
               << ", d_norm = " << d.norm() << ":\n"
               << x_ << std::endl;
 #endif
 
-    dx_ = tau_ * d;
+    dx_ = t_ * d;
     x_ += dx_;
     if (dx_.norm() < param_.terminate_threshold) {
       break;
@@ -75,7 +91,7 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
   return x_;
 }
 
-// line-search steepest gradient descent with Armijo condition
+// newton's method
 Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
   x_ = x0;
   iter_ = 0;
@@ -89,20 +105,60 @@ Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
     M_ = H_ + alpha_ * eye.setIdentity(H_.rows(), H_.cols());
 
     Eigen::VectorXd d = M_.llt().solve(-g_);
-    tau_ = LineSearch(d, param_.c, param_.tau_init, x_, g_);
+    t_ = LineSearch(d, param_.c, param_.tau_init, x_, g_);
 
 #ifdef SOLVER_DEBUG
-    std::cout << "iter = " << iter_ << ", tau = " << tau_
+    std::cout << "iter = " << iter_ << ", tau = " << t_
               << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
               << "x = \n"
               << x_ << std::endl;
 #endif
 
-    dx_ = tau_ * d;
+    dx_ = t_ * d;
     x_ += dx_;
     if (g_.norm() < param_.terminate_threshold) {
       break;
     }
+
+    // info
+    info_.obj_val.push_back(problem_ptr_->GetObjective(x_));
+    info_.iter_vec.push_back(iter_);
+  }
+
+  return x_;
+}
+
+// quasi-newton's method
+Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
+  x_ = x0;
+  iter_ = 0;
+  B_.resize(x0.size(), x0.size());
+  B_.setIdentity();
+
+  cout << "B_ = " << B_ << endl;
+
+  g_ = problem_ptr_->GetGradient(x_);
+  for (int i = 0; i < param_.max_iter; ++i) {
+    if (g_.norm() < param_.terminate_threshold) {
+      break;
+    }
+    iter_++;
+    Eigen::VectorXd d = -B_ * g_;
+    t_ = LineSearch(d, param_.c, param_.tau_init, x_, g_);
+    dx_ = t_ * d;
+    x_ += dx_;
+    auto g = g_;
+    g_ = problem_ptr_->GetGradient(x_);
+    dg_ = g_ - g;
+
+    BFGS(B_, dx_, dg_);
+
+#ifdef SOLVER_DEBUG
+    std::cout << "iter = " << iter_ << ", t = " << t_
+              << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
+              << "x = \n"
+              << x_ << std::endl;
+#endif
 
     // info
     info_.obj_val.push_back(problem_ptr_->GetObjective(x_));

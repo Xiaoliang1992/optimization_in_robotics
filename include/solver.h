@@ -13,7 +13,7 @@ enum SolverType {
 };
 
 struct SolverParameters {
-  int max_iter = 50;              // max iteration time
+  int max_iter = 50;                 // max iteration time
   double c = 0.001;                  // c
   double tau_init = 1.0;             // init step size
   double terminate_threshold = 1e-6; // iteration terminate threshold
@@ -37,6 +37,8 @@ public:
   virtual double LineSearch(const Eigen::VectorXd &d, const double c,
                             const double tau_init, const Eigen::VectorXd &x,
                             const Eigen::VectorXd &g) final;
+  virtual void BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
+                    const Eigen::VectorXd &dg) final;
   virtual Eigen::VectorXd Solve(const Eigen::VectorXd &x0) = 0;
 
   virtual Eigen::VectorXd Getx() final { return x_; }
@@ -50,13 +52,15 @@ protected:
   Eigen::VectorXd x_;                    // iterative optimization variables
   Eigen::VectorXd dx_; // iterative optimization variables increments
   Eigen::MatrixXd H_;  // hessian matrix
+  Eigen::MatrixXd B_;  // dx = B * dg
   Eigen::MatrixXd M_;  // PSD matrix M = H + alpha * I
   Eigen::VectorXd g_;  // gradient
+  Eigen::VectorXd dg_; // iterative gradient increments
   Eigen::VectorXd lb_; // lower bound
   Eigen::VectorXd ub_; // upper bound
   double alpha_ = 0.0;
-  double tau_ = 0.0; // step size
-  int iter_ = 0;     // iter time
+  double t_ = 0.0; // step size
+  int iter_ = 0;   // iter time
 
   SolverDebugInfo info_; // debug info
 };

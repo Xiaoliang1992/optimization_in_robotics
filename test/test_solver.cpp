@@ -10,7 +10,7 @@ using namespace matplotlibcpp;
 
 int main() {
 
-  shared_ptr<Solver> solver_ptr = make_shared<NewtonsMethod>();
+  shared_ptr<Solver> solver_ptr = make_shared<QuasiNewtonsMethod>();
   solver_ptr->SetProblem(ProblemType::Example1);
   Eigen::VectorXd x(N);
   x.setZero();
