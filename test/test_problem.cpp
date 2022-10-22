@@ -8,7 +8,7 @@ using namespace optimization_solver;
 int main() {
 
   shared_ptr<Problem> problem_ptr = make_shared<RosenbrockFunction>();
-  Eigen::VectorXd x(N);
+  Eigen::VectorXd x(kRosenbrockN);
 
   for (int i = 0; i < 30; ++i) {
 

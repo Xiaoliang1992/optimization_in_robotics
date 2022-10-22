@@ -4,7 +4,7 @@
 #include <eigen3/Eigen/Core>
 #include <iostream>
 
-static const int N = 4;
+static const int kRosenbrockN = 2;
 
 namespace optimization_solver {
 enum ProblemType {
@@ -26,7 +26,7 @@ protected:
 
 class RosenbrockFunction : public Problem {
 public:
-  RosenbrockFunction() { size_ = N; }
+  RosenbrockFunction() { size_ = kRosenbrockN; }
   double GetObjective(const Eigen::VectorXd &x) override;
   Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
   Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;

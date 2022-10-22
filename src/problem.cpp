@@ -50,13 +50,13 @@ Eigen::MatrixXd Problem::GetHessian(const Eigen::VectorXd &x) {
 
 // RosenbrockFunction problem
 double RosenbrockFunction::GetObjective(const Eigen::VectorXd &x) {
-  if (x.size() != N) {
-    std::cout << "x.size() is not equal to N!\nPlease check input size!"
+  if (x.size() != kRosenbrockN) {
+    std::cout << "x.size() is not equal to kRosenbrockN!\nPlease check input size!"
               << std::endl;
   }
 
   double s = 0.0;
-  for (size_t i = 1; i <= N / 2; ++i) {
+  for (size_t i = 1; i <= kRosenbrockN / 2; ++i) {
     double x_2i1 = x(2 * i - 2);
     double x_2i = x(2 * i - 1);
     s += 100.0 * std::pow(x_2i1 * x_2i1 - x_2i, 2) + std::pow(x_2i1 - 1.0, 2);
@@ -69,7 +69,7 @@ Eigen::VectorXd RosenbrockFunction::GetGradient(const Eigen::VectorXd &x) {
   auto size = x.size();
   Eigen::VectorXd g(size);
 
-  for (size_t i = 1; i <= N / 2; ++i) {
+  for (size_t i = 1; i <= kRosenbrockN / 2; ++i) {
     g(2 * i - 2) = 400.0 * std::pow(x(2 * i - 2), 3) -
                    400.0 * x(2 * i - 2) * x(2 * i - 1) + 2.0 * x(2 * i - 2) -
                    2.0;
@@ -84,7 +84,7 @@ Eigen::MatrixXd RosenbrockFunction::GetHessian(const Eigen::VectorXd &x) {
   Eigen::MatrixXd H(size, size);
   H.setZero();
 
-  for (size_t i = 1; i <= N / 2; ++i) {
+  for (size_t i = 1; i <= kRosenbrockN / 2; ++i) {
     H(2 * i - 2, 2 * i - 2) =
         1200.0 * std::pow(x(2 * i - 2), 2) - 400.0 * x(2 * i - 1) + 2.0;
     H(2 * i - 2, 2 * i - 1) = -400.0 * x(2 * i - 2);

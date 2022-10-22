@@ -13,10 +13,10 @@ enum SolverType {
 };
 
 struct SolverParameters {
-  int max_iter = 50;                 // max iteration time
-  double c = 0.001;                  // c
-  double tau_init = 1.0;             // init step size
-  double terminate_threshold = 1e-6; // iteration terminate threshold
+  int max_iter = 5000;                 // max iteration time
+  double c = 0.0001;                  // c
+  double t_init = 1.0;             // init step size
+  double terminate_threshold = 1e-20; // iteration terminate threshold
 };
 
 // solver base
@@ -35,7 +35,7 @@ public:
   virtual void SetProblem(const ProblemType &type) final;
   virtual void SetParam(const SolverParameters &param) final;
   virtual double LineSearch(const Eigen::VectorXd &d, const double c,
-                            const double tau_init, const Eigen::VectorXd &x,
+                            const double t_init, const Eigen::VectorXd &x,
                             const Eigen::VectorXd &g) final;
   virtual void BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
                     const Eigen::VectorXd &dg) final;
