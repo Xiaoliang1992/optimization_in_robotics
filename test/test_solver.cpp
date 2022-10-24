@@ -12,7 +12,7 @@ int main() {
 
   shared_ptr<Solver> solver_ptr = make_shared<QuasiNewtonsMethod>();
 
-  auto problem_type = ProblemType::PRosenbrock;
+  auto problem_type = ProblemType::Example2;
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;

@@ -2,6 +2,7 @@
 #define __SOLVER_H__
 
 #include "problem.h"
+#include <deque>
 #include <eigen3/Eigen/Core>
 #include <iostream>
 #include <memory>
@@ -19,12 +20,13 @@ enum LineSearchMethod {
 };
 
 struct SolverParameters {
-  int max_iter = 50;                              // max iteration time
-  uint8_t linesearch_method = WolfeStrongCondition; // line search method
-  double c1 = 0.0001;                             // c1
-  double c2 = 0.9;                                // c2
-  double t0 = 1.0;                                // init step size
-  double terminate_threshold = 1e-6; // iteration terminate threshold
+  int max_iter = 50;                           // max iteration time
+  uint8_t linesearch_method = WolfeWeakCondition; // line search method
+  double c1 = 0.0001;                          // c1
+  double c2 = 0.9;                             // c2
+  double t0 = 1.0;                             // init step size
+  double terminate_threshold = 1e-6;           // iteration terminate threshold
+  uint16_t m = 5;                              // LBFGS memory size
 };
 
 // solver base
@@ -40,16 +42,20 @@ struct SolverDebugInfo {
 
 class Solver {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   virtual void SetProblem(const ProblemType &type) final;
   virtual void SetParam(const SolverParameters &param) final;
   virtual double LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
                             const Eigen::VectorXd &g,
                             const SolverParameters &param) final;
-  virtual void BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
-                    const Eigen::VectorXd &g, const Eigen::VectorXd &dg) final;
-  // virtual void LBFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
-  //                    const Eigen::VectorXd &g, const Eigen::VectorXd &dg)
-  //                    final;
+  virtual Eigen::VectorXd BFGS(const Eigen::VectorXd &dx,
+                               const Eigen::VectorXd &g,
+                               const Eigen::VectorXd &dg) final;
+
+  virtual Eigen::VectorXd LBFGS(const Eigen::VectorXd &dx,
+                                const Eigen::VectorXd &g,
+                                const Eigen::VectorXd &dg) final;
+
   virtual Eigen::VectorXd Solve(const Eigen::VectorXd &x0) = 0;
 
   virtual Eigen::VectorXd Getx() final { return x_; }
@@ -71,7 +77,12 @@ protected:
   Eigen::VectorXd dg_; // iterative gradient increments
   Eigen::VectorXd lb_; // lower bound
   Eigen::VectorXd ub_; // upper bound
-  double f_;           // cost
+
+  std::deque<Eigen::VectorXd> dx_vec_;
+  std::deque<Eigen::VectorXd> dg_vec_;
+  std::deque<double> rho_vec_;
+
+  double f_; // cost
   double alpha_ = 0.0;
   double t_ = 0.0; // step size
   int iter_ = 0;   // iter time

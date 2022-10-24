@@ -1,11 +1,11 @@
 #include "solver.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "problem.h"
 #include <Eigen/Cholesky>
 #include <cmath>
 #include <complex>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #define SOLVER_DEBUG
 
@@ -94,8 +94,9 @@ double Solver::LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
   return t;
 }
 
-void Solver::BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
-                  const Eigen::VectorXd &g, const Eigen::VectorXd &dg) {
+Eigen::VectorXd Solver::BFGS(const Eigen::VectorXd &dx,
+                             const Eigen::VectorXd &g,
+                             const Eigen::VectorXd &dg) {
   Eigen::MatrixXd eye;
   eye.setIdentity(dx.size(), dx.size());
 
@@ -106,9 +107,50 @@ void Solver::BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
   static const double kEps = 1e-6;
 
   if (dxT_dg > kEps * g.norm() * dx.norm()) {
-    B = (eye - dx_dgT / dxT_dg) * B * (eye - dg_dxT / dxT_dg) +
-        dx * dx.transpose() / dxT_dg;
+    B_ = (eye - dx_dgT / dxT_dg) * B_ * (eye - dg_dxT / dxT_dg) +
+         dx * dx.transpose() / dxT_dg;
   }
+
+  auto d = -B_ * g_;
+
+  return d;
+}
+
+Eigen::VectorXd Solver::LBFGS(const Eigen::VectorXd &dx,
+                              const Eigen::VectorXd &g,
+                              const Eigen::VectorXd &dg) {
+  Eigen::VectorXd d = -g;
+  while (dx_vec_.size() >= param_.m) {
+    dx_vec_.pop_front();
+    dg_vec_.pop_front();
+    rho_vec_.pop_front();
+  }
+
+  dx_vec_.emplace_back(dx);
+  dg_vec_.emplace_back(dg);
+  rho_vec_.emplace_back(1.0 / dx.dot(dg));
+
+  static std::vector<double> alpha_vec;
+  alpha_vec.resize(param_.m);
+
+  int k = dx_vec_.size();
+
+  if (k > 1) {
+    for (int i = k - 1; i >= 0; --i) {
+      alpha_vec[i] = rho_vec_[i] * dx_vec_[i].dot(d);
+      d = d - alpha_vec[i] * dg_vec_[i];
+    }
+
+    double gama = alpha_vec[k - 1] * dg_vec_[k - 1].norm();
+    d = d / gama;
+
+    for (int i = 0; i < k - 1; ++i) {
+      double beta = rho_vec_[i] * dg_vec_[i].dot(d);
+      d = d + dx_vec_[i] * (alpha_vec[i] - beta);
+    }
+  }
+
+  return d;
 }
 
 // line-search steepest gradient descent with Armijo condition
@@ -187,7 +229,6 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
 
   while (g_.norm() > param_.terminate_threshold) {
     iter_++;
-    d_ = -B_ * g_;
 
     t_ = LineSearch(d_, x_, g_, param_);
 
@@ -199,7 +240,8 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
 
     f_ = problem_ptr_->GetCost(x_);
 
-    BFGS(B_, dx_, g_, dg_);
+    // d_ = BFGS(dx_, g_, dg_);
+    d_ = LBFGS(dx_, g_, dg_);
 
     DebugInfo();
 
