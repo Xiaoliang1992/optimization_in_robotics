@@ -1,6 +1,7 @@
 #include "solver.h"
 #include "problem.h"
 #include <Eigen/Cholesky>
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <iostream>
@@ -9,7 +10,7 @@
 
 #define SOLVER_DEBUG
 
-static const double kMinimumStep = 1e-3;
+static const double kMinimumStep = 1e-8;
 
 using namespace std;
 namespace optimization_solver {
@@ -32,6 +33,9 @@ void Solver::SetProblem(const ProblemType &type) {
     break;
   case ProblemType::Example2:
     problem_ptr_ = std::make_shared<Example2Func>();
+    break;
+  case ProblemType::Example3:
+    problem_ptr_ = std::make_shared<Example3Func>();
     break;
   }
 }
@@ -94,6 +98,56 @@ double Solver::LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
   return t;
 }
 
+double Solver::LOLineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
+                            const Eigen::VectorXd &g,
+                            const SolverParameters &param) {
+
+  double t = param.t0;
+  double f0 = problem_ptr_->GetCost(x);
+  double f1 = problem_ptr_->GetCost(x + t * d);
+
+  double c2_dT_g0 = param.c2 * d.transpose() * g;
+
+  Eigen::VectorXd g1 = problem_ptr_->GetGradient(x + t * d);
+  double dT_g1 = d.transpose() * g1;
+
+  bool armijo_condition = (f1 > f0 + param.c1 * t * d.transpose() * g);
+  bool wolfe_condition = (c2_dT_g0 > dT_g1);
+
+  double l = 0.0;
+  double u_max = 100000000.0;
+  double u = u_max;
+
+  while (armijo_condition || wolfe_condition) {
+    if (armijo_condition) {
+      u = t;
+    } else if (wolfe_condition) {
+      l = t;
+    } else {
+      return t;
+    }
+
+    if (u < u_max) {
+      t = (l + u) / 2.0;
+    } else {
+      t = 2.0 * l;
+    }
+
+    if (t < kMinimumStep) {
+      break;
+    }
+
+    f1 = problem_ptr_->GetCost(x + t * d);
+    g1 = problem_ptr_->GetGradient(x + t * d);
+    dT_g1 = d.transpose() * g1;
+
+    armijo_condition = (f1 > f0 + param.c1 * t * d.transpose() * g);
+    wolfe_condition = (c2_dT_g0 > dT_g1);
+  }
+
+  return t;
+}
+
 Eigen::VectorXd Solver::BFGS(const Eigen::VectorXd &dx,
                              const Eigen::VectorXd &g,
                              const Eigen::VectorXd &dg) {
@@ -128,20 +182,22 @@ Eigen::VectorXd Solver::LBFGS(const Eigen::VectorXd &dx,
 
   dx_vec_.emplace_back(dx);
   dg_vec_.emplace_back(dg);
-  rho_vec_.emplace_back(1.0 / dx.dot(dg));
+  rho_vec_.emplace_back(1.0 / std::max(dx.dot(dg), kMinimumStep));
 
   static std::vector<double> alpha_vec;
   alpha_vec.resize(param_.m);
 
   int k = dx_vec_.size();
 
-  if (k > 1) {
+  if (k > 2) {
     for (int i = k - 1; i >= 0; --i) {
       alpha_vec[i] = rho_vec_[i] * dx_vec_[i].dot(d);
       d = d - alpha_vec[i] * dg_vec_[i];
     }
 
     double gama = alpha_vec[k - 1] * dg_vec_[k - 1].norm();
+    gama = std::max(gama, kMinimumStep);
+
     d = d / gama;
 
     for (int i = 0; i < k - 1; ++i) {
@@ -149,7 +205,6 @@ Eigen::VectorXd Solver::LBFGS(const Eigen::VectorXd &dx,
       d = d + dx_vec_[i] * (alpha_vec[i] - beta);
     }
   }
-
   return d;
 }
 
@@ -230,7 +285,7 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
   while (g_.norm() > param_.terminate_threshold) {
     iter_++;
 
-    t_ = LineSearch(d_, x_, g_, param_);
+    t_ = LOLineSearch(d_, x_, g_, param_);
 
     dx_ = t_ * d_;
     x_ += dx_;

@@ -12,7 +12,7 @@ int main() {
 
   shared_ptr<Solver> solver_ptr = make_shared<QuasiNewtonsMethod>();
 
-  auto problem_type = ProblemType::Example2;
+  auto problem_type = ProblemType::Example3;
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;
@@ -24,6 +24,9 @@ int main() {
     x.resize(2);
     break;
   case ProblemType::Example2:
+    x.resize(2);
+    break;
+  case ProblemType::Example3:
     x.resize(2);
     break;
   }

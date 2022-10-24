@@ -10,6 +10,7 @@ namespace optimization_solver {
 enum ProblemType {
   Example1,
   Example2,
+  Example3,
   PRosenbrock,
 };
 
@@ -50,6 +51,16 @@ public:
   Example2Func() { size_ = 2; }
   double GetCost(const Eigen::VectorXd &x) override;
   // Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
+  // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
+
+private:
+};
+
+class Example3Func : public Problem {
+public:
+  Example3Func() { size_ = 2; }
+  double GetCost(const Eigen::VectorXd &x) override;
+  Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
   // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
 
 private:

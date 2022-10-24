@@ -20,13 +20,13 @@ enum LineSearchMethod {
 };
 
 struct SolverParameters {
-  int max_iter = 50;                           // max iteration time
+  int max_iter = 80;                              // max iteration time
   uint8_t linesearch_method = WolfeWeakCondition; // line search method
-  double c1 = 0.0001;                          // c1
-  double c2 = 0.9;                             // c2
-  double t0 = 1.0;                             // init step size
-  double terminate_threshold = 1e-6;           // iteration terminate threshold
-  uint16_t m = 5;                              // LBFGS memory size
+  double c1 = 0.0001;                             // c1
+  double c2 = 0.9;                                // c2
+  double t0 = 1.0;                                // init step size
+  double terminate_threshold = 1e-6; // iteration terminate threshold
+  uint16_t m = 30;                    // LBFGS memory size
 };
 
 // solver base
@@ -48,6 +48,10 @@ public:
   virtual double LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
                             const Eigen::VectorXd &g,
                             const SolverParameters &param) final;
+  virtual double LOLineSearch(const Eigen::VectorXd &d,
+                              const Eigen::VectorXd &x,
+                              const Eigen::VectorXd &g,
+                              const SolverParameters &param) final;
   virtual Eigen::VectorXd BFGS(const Eigen::VectorXd &dx,
                                const Eigen::VectorXd &g,
                                const Eigen::VectorXd &dg) final;

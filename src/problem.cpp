@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstddef>
 
+using namespace std;
 namespace optimization_solver {
 static const double eps_value = 1e-8;
 
@@ -110,6 +111,23 @@ double Example1Func::GetCost(const Eigen::VectorXd &x) {
 double Example2Func::GetCost(const Eigen::VectorXd &x) {
   double y = std::pow(1.0 - x(0), 2) + std::pow(x(1) - x(0) * x(0), 2);
   return y;
+}
+
+// example3: nonsmooth
+double Example3Func::GetCost(const Eigen::VectorXd &x) {
+  double y = (1.0 - x(0)) * (1.0 - x(0)) + std::abs(x(1) - x(0) * x(0));
+  return y;
+}
+
+Eigen::VectorXd Example3Func::GetGradient(const Eigen::VectorXd &x) {
+  auto size = x.size();
+  Eigen::VectorXd g(size);
+  if (x(1) - x(0) * x(0) >= 0.0) {
+    g << -2.0, 1.0;
+  } else {
+    g << -2.0 + 4.0 * x(0), -1.0;
+  }
+  return g;
 }
 
 } // namespace optimization_solver
