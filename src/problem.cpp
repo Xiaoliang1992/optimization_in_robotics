@@ -3,7 +3,7 @@
 #include <cstddef>
 
 namespace optimization_solver {
-static const double eps_value = 1e-5;
+static const double eps_value = 1e-8;
 
 // base problem
 Eigen::VectorXd Problem::GetDiffGradient(const Eigen::VectorXd &x) {
@@ -13,7 +13,7 @@ Eigen::VectorXd Problem::GetDiffGradient(const Eigen::VectorXd &x) {
 
   for (int i = 0; i < size; ++i) {
     dxi(i) = eps_value;
-    g(i) = (GetObjective(x + dxi) - GetObjective(x - dxi)) / (2.0 * eps_value);
+    g(i) = (GetCost(x + dxi) - GetCost(x - dxi)) / (2.0 * eps_value);
     dxi(i) = 0.0;
   }
   return g;
@@ -29,8 +29,8 @@ Eigen::MatrixXd Problem::GetDiffHessian(const Eigen::VectorXd &x) {
     for (int j = 0; j < size; ++j) {
       dxi(i) = eps_value;
       dxj(j) = eps_value;
-      h(i, j) = (GetObjective(x + dxi + dxj) - GetObjective(x - dxi + dxj) -
-                 GetObjective(x + dxi - dxj) + GetObjective(x - dxi - dxj)) /
+      h(i, j) = (GetCost(x + dxi + dxj) - GetCost(x - dxi + dxj) -
+                 GetCost(x + dxi - dxj) + GetCost(x - dxi - dxj)) /
                 (4.0 * eps_value * eps_value);
       dxi(i) = 0.0;
       dxj(j) = 0.0;
@@ -49,10 +49,11 @@ Eigen::MatrixXd Problem::GetHessian(const Eigen::VectorXd &x) {
 }
 
 // RosenbrockFunction problem
-double RosenbrockFunction::GetObjective(const Eigen::VectorXd &x) {
+double RosenbrockFunction::GetCost(const Eigen::VectorXd &x) {
   if (x.size() != kRosenbrockN) {
-    std::cout << "x.size() is not equal to kRosenbrockN!\nPlease check input size!"
-              << std::endl;
+    std::cout
+        << "x.size() is not equal to kRosenbrockN!\nPlease check input size!"
+        << std::endl;
   }
 
   double s = 0.0;
@@ -98,10 +99,16 @@ Eigen::MatrixXd RosenbrockFunction::GetHessian(const Eigen::VectorXd &x) {
 
 // example1: f(x1, x2) = exp(x1 + 3x2 - 0.1) + exp(x1 - 3x2 - 0.1) + exp(-x1 -
 // 0.1)
-double Example1Func::GetObjective(const Eigen::VectorXd &x) {
+double Example1Func::GetCost(const Eigen::VectorXd &x) {
   double y = std::exp(x(0) + 3.0 * x(1) - 0.1) +
              std::exp(x(0) - 3.0 * x(1) - 0.1) + std::exp(-x(0) - 0.1);
 
+  return y;
+}
+
+// example2: f(x1, x2) = (1 - x1)^2 + (x2 - x1^2)^2
+double Example2Func::GetCost(const Eigen::VectorXd &x) {
+  double y = std::pow(1.0 - x(0), 2) + std::pow(x(1) - x(0) * x(0), 2);
   return y;
 }
 

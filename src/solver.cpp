@@ -2,10 +2,14 @@
 #include "Eigen/src/Core/Matrix.h"
 #include "problem.h"
 #include <Eigen/Cholesky>
+#include <cmath>
+#include <complex>
 #include <iostream>
 #include <memory>
 
 #define SOLVER_DEBUG
+
+static const double kMinimumStep = 1e-3;
 
 using namespace std;
 namespace optimization_solver {
@@ -26,37 +30,83 @@ void Solver::SetProblem(const ProblemType &type) {
   case ProblemType::Example1:
     problem_ptr_ = std::make_shared<Example1Func>();
     break;
+  case ProblemType::Example2:
+    problem_ptr_ = std::make_shared<Example2Func>();
+    break;
   }
 }
 
-double Solver::LineSearch(const Eigen::VectorXd &d, const double c,
-                          const double t_init, const Eigen::VectorXd &x,
-                          const Eigen::VectorXd &g) {
-  double t = t_init;
-  double f0 = problem_ptr_->GetObjective(x);
-  double f1 = problem_ptr_->GetObjective(x + t * d);
+double Solver::LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
+                          const Eigen::VectorXd &g,
+                          const SolverParameters &param) {
+  double t = param.t0;
+  double f0 = problem_ptr_->GetCost(x);
+  double f1 = problem_ptr_->GetCost(x + t * d);
 
-  // Armijo condition for backtracking line search
-  while (f1 > f0 + c * t * d.transpose() * g) {
-    t *= 0.5;
-    f1 = problem_ptr_->GetObjective(x + t * d);
+  double c2_dT_g0 = param.c2 * d.transpose() * g;
+
+  Eigen::VectorXd g1 = problem_ptr_->GetGradient(x + t * d);
+  double dT_g1 = d.transpose() * g1;
+
+  switch (param.linesearch_method) {
+  case ArmijoCondition:
+    while (f1 > f0 + param.c1 * t * d.transpose() * g) {
+      t *= 0.5;
+      f1 = problem_ptr_->GetCost(x + t * d);
+      if (t < kMinimumStep) {
+        break;
+      }
+    }
+    break;
+  case WolfeWeakCondition:
+    while ((f1 > f0 + param.c1 * t * d.transpose() * g) || (c2_dT_g0 > dT_g1)) {
+      t *= 0.5;
+      f1 = problem_ptr_->GetCost(x + t * d);
+      g1 = problem_ptr_->GetGradient(x + t * d);
+      dT_g1 = d.transpose() * g1;
+      if (t < kMinimumStep) {
+        break;
+      }
+    }
+    break;
+  case WolfeStrongCondition:
+    while ((f1 > f0 + param.c1 * t * d.transpose() * g) ||
+           (std::abs(c2_dT_g0) < std::abs(dT_g1))) {
+      t *= 0.5;
+      f1 = problem_ptr_->GetCost(x + t * d);
+      g1 = problem_ptr_->GetGradient(x + t * d);
+      dT_g1 = d.transpose() * g1;
+      if (t < kMinimumStep) {
+        break;
+      }
+    }
+    break;
+  default:
+    while (f1 > f0 + param.c1 * t * d.transpose() * g) {
+      t *= 0.5;
+      f1 = problem_ptr_->GetCost(x + t * d);
+      if (t < kMinimumStep) {
+        break;
+      }
+    }
   }
 
   return t;
 }
 
 void Solver::BFGS(Eigen::MatrixXd &B, const Eigen::VectorXd &dx,
-                  const Eigen::VectorXd &dg) {
-
+                  const Eigen::VectorXd &g, const Eigen::VectorXd &dg) {
   Eigen::MatrixXd eye;
   eye.setIdentity(dx.size(), dx.size());
 
   Eigen::MatrixXd dx_dgT = dx * dg.transpose();
+  Eigen::MatrixXd dg_dxT = dg * dx.transpose();
 
   double dxT_dg = dx.dot(dg);
+  static const double kEps = 1e-6;
 
-  if (dxT_dg > 0.0) {
-    B = (eye - dx_dgT / dxT_dg) * B * (eye - dx_dgT / dxT_dg) +
+  if (dxT_dg > kEps * g.norm() * dx.norm()) {
+    B = (eye - dx_dgT / dxT_dg) * B * (eye - dg_dxT / dxT_dg) +
         dx * dx.transpose() / dxT_dg;
   }
 }
@@ -68,19 +118,15 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
 
   for (int i = 0; i < param_.max_iter; ++i) {
     iter_++;
-    t_ = param_.t_init;
+    t_ = param_.t0;
     g_ = problem_ptr_->GetGradient(x_);
 
-    Eigen::VectorXd d = -g_;
-    t_ = LineSearch(d, param_.c, t_, x_, g_);
+    d_ = -g_;
+    t_ = LineSearch(d_, x_, g_, param_);
 
-#ifdef SOLVER_DEBUG
-    std::cout << "iter = " << iter_ << ", t = " << t_
-              << ", d_norm = " << d.norm() << ":\n"
-              << x_ << std::endl;
-#endif
+    DebugInfo();
 
-    dx_ = t_ * d;
+    dx_ = t_ * d_;
     x_ += dx_;
     if (dx_.norm() < param_.terminate_threshold) {
       break;
@@ -107,17 +153,12 @@ Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
     Eigen::MatrixXd eye;
     M_ = H_ + alpha_ * eye.setIdentity(H_.rows(), H_.cols());
 
-    Eigen::VectorXd d = M_.llt().solve(-g_);
-    t_ = LineSearch(d, param_.c, param_.t_init, x_, g_);
+    d_ = M_.llt().solve(-g_);
+    t_ = LineSearch(d_, x_, g_, param_);
 
-#ifdef SOLVER_DEBUG
-    std::cout << "iter = " << iter_ << ", t = " << t_ << ",\nd = " << d << endl
-              << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
-              << "x = \n"
-              << x_ << std::endl;
-#endif
+    DebugInfo();
 
-    dx_ = t_ * d;
+    dx_ = t_ * d_;
     x_ += dx_;
 
     // info
@@ -139,36 +180,52 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
   B_.resize(x0.size(), x0.size());
   B_.setIdentity();
 
-  g_ = problem_ptr_->GetDiffGradient(x_);
-  for (int i = 0; i < param_.max_iter; ++i) {
-    if (g_.norm() < param_.terminate_threshold) {
-      break;
-    }
+  f_ = problem_ptr_->GetCost(x_);
+  g_ = problem_ptr_->GetGradient(x_);
+  d_ = -B_ * g_;
+  DebugInfo();
+
+  while (g_.norm() > param_.terminate_threshold) {
     iter_++;
-    Eigen::VectorXd d = -B_ * g_;
-    t_ = LineSearch(d, param_.c, param_.t_init, x_, g_);
-    dx_ = t_ * d;
+    d_ = -B_ * g_;
+
+    t_ = LineSearch(d_, x_, g_, param_);
+
+    dx_ = t_ * d_;
     x_ += dx_;
     auto g = g_;
-    g_ = problem_ptr_->GetDiffGradient(x_);
+    g_ = problem_ptr_->GetGradient(x_);
     dg_ = g_ - g;
 
-    BFGS(B_, dx_, dg_);
+    f_ = problem_ptr_->GetCost(x_);
 
-#ifdef SOLVER_DEBUG
-    std::cout << "iter = " << iter_ << ", t = " << t_
-              << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
-              << "B_ = " << B_ << std::endl
-              << "x = \n"
-              << x_ << std::endl;
-#endif
+    BFGS(B_, dx_, g_, dg_);
+
+    DebugInfo();
 
     // info
     info_.obj_val.push_back(std::log10(g_.norm()));
     info_.iter_vec.push_back(iter_);
+
+    if (iter_ >= param_.max_iter) {
+      break;
+    }
   }
 
   return x_;
+}
+
+void Solver::DebugInfo() {
+#ifdef SOLVER_DEBUG
+  std::cout << "----------------------- iter = " << iter_
+            << "-----------------------" << endl
+            << "t = " << t_ << ",\nd = " << d_ << endl
+            << "f = " << f_ << endl
+            << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
+            << "g = \n"
+            << g_ << "\nx = \n"
+            << x_ << std::endl;
+#endif
 }
 
 } // namespace optimization_solver

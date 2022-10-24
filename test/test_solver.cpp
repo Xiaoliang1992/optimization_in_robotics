@@ -10,9 +10,9 @@ using namespace matplotlibcpp;
 
 int main() {
 
-  shared_ptr<Solver> solver_ptr = make_shared<NewtonsMethod>();
+  shared_ptr<Solver> solver_ptr = make_shared<QuasiNewtonsMethod>();
 
-  auto problem_type = ProblemType::Example1;
+  auto problem_type = ProblemType::PRosenbrock;
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;
@@ -23,9 +23,12 @@ int main() {
   case ProblemType::Example1:
     x.resize(2);
     break;
+  case ProblemType::Example2:
+    x.resize(2);
+    break;
   }
 
-  x.setZero();
+  x << -0.5, -0.5;
 
   auto t_start = std::chrono::system_clock::now();
   x = solver_ptr->Solve(x);

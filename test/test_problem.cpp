@@ -14,7 +14,7 @@ int main() {
 
     x.setRandom();
 
-    problem_ptr->GetObjective(x);
+    problem_ptr->GetCost(x);
 
     cout << "norm(GetDiffGradient - GetGradient) = "
          << (problem_ptr->GetDiffGradient(x) - problem_ptr->GetGradient(x))

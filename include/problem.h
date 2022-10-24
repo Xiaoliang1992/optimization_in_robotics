@@ -8,13 +8,14 @@ static const int kRosenbrockN = 2;
 
 namespace optimization_solver {
 enum ProblemType {
-  Example1 = 0,
-  PRosenbrock = 1,
+  Example1,
+  Example2,
+  PRosenbrock,
 };
 
 class Problem {
 public:
-  virtual double GetObjective(const Eigen::VectorXd &x) = 0;
+  virtual double GetCost(const Eigen::VectorXd &x) = 0;
   virtual Eigen::VectorXd GetGradient(const Eigen::VectorXd &x);
   virtual Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x);
   virtual Eigen::VectorXd GetDiffGradient(const Eigen::VectorXd &x) final;
@@ -27,7 +28,7 @@ protected:
 class RosenbrockFunction : public Problem {
 public:
   RosenbrockFunction() { size_ = kRosenbrockN; }
-  double GetObjective(const Eigen::VectorXd &x) override;
+  double GetCost(const Eigen::VectorXd &x) override;
   Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
   Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
 
@@ -37,7 +38,17 @@ private:
 class Example1Func : public Problem {
 public:
   Example1Func() { size_ = 2; }
-  double GetObjective(const Eigen::VectorXd &x) override;
+  double GetCost(const Eigen::VectorXd &x) override;
+  // Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
+  // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
+
+private:
+};
+
+class Example2Func : public Problem {
+public:
+  Example2Func() { size_ = 2; }
+  double GetCost(const Eigen::VectorXd &x) override;
   // Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
   // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
 
