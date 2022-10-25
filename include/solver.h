@@ -26,7 +26,7 @@ struct SolverParameters {
   double c2 = 0.9;                                // c2
   double t0 = 1.0;                                // init step size
   double terminate_threshold = 1e-6; // iteration terminate threshold
-  uint16_t m = 30;                    // LBFGS memory size
+  uint16_t m = 30;                   // LBFGS memory size
 };
 
 // solver base
@@ -112,6 +112,13 @@ class QuasiNewtonsMethod : public Solver {
 public:
   QuasiNewtonsMethod() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
+};
+
+class NetonCGMethod : public Solver {
+public:
+  NetonCGMethod() {}
+  Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
+  Eigen::VectorXd Gamau(const Eigen::VectorXd &u, const Eigen::VectorXd &x);
 };
 
 } // namespace optimization_solver

@@ -1,4 +1,5 @@
 #include "solver.h"
+#include "Eigen/src/Core/Matrix.h"
 #include "problem.h"
 #include <Eigen/Cholesky>
 #include <algorithm>
@@ -310,6 +311,92 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
   }
 
   return x_;
+}
+
+// newton's CG method
+Eigen::VectorXd NetonCGMethod::Solve(const Eigen::VectorXd &x0) {
+  x_ = x0;
+  iter_ = 0;
+  f_ = problem_ptr_->GetCost(x_);
+  g_ = problem_ptr_->GetGradient(x_);
+
+  DebugInfo();
+
+  Eigen::VectorXd d(x_.size());
+  Eigen::VectorXd v(x_.size());
+  Eigen::VectorXd v1(x_.size());
+  Eigen::VectorXd u(x_.size());
+  int j = 0;
+
+  while (g_.norm() > param_.terminate_threshold) {
+    iter_++;
+    double e = std::min(1.0, g_.norm()) / 10.0;
+    d.setZero();
+    v = -g_;
+    u = v;
+    j = 1;
+
+    while (v.norm() > e * g_.norm()) {
+      if (u.transpose() * Gamau(u, x_) <= 0.0) {
+        if (j == 1) {
+          d = -g_;
+        }
+        break;
+      }
+
+      // cout << "v = " << v << endl;
+      // cout << "d = " << d << endl;
+
+      t_ = v.norm() * v.norm() / (u.transpose() * Gamau(u, x_));
+
+      d = d + t_ * u;
+      v1 = v - t_ * Gamau(u, x_);
+
+      // cout << "v1 = " << v1 << endl;
+      // cout << "Gamau(u, x_) = " << Gamau(u, x_) << endl;
+      double beta = v1.norm() * v1.norm() / (v.norm() * v.norm() + 1e-4);
+
+      v = v1;
+      u = v + beta * u;
+      j++;
+
+      // cout << "t_ = " << t_ << endl;
+      // cout << "beta = " << beta << endl;
+      // cout << "v = " << v << endl;
+      // cout << "u = " << u << endl;
+      // cout << "d = " << d << endl << endl;
+
+      if (j > 100) {
+        break;
+      }
+    }
+
+    d_ = d;
+
+    t_ = LOLineSearch(d_, x_, g_, param_);
+
+    dx_ = t_ * d_;
+    x_ += dx_;
+
+    f_ = problem_ptr_->GetCost(x_);
+    g_ = problem_ptr_->GetGradient(x_);
+    DebugInfo();
+
+    if (iter_ >= param_.max_iter) {
+      break;
+    }
+  }
+
+  return x_;
+}
+
+Eigen::VectorXd NetonCGMethod::Gamau(const Eigen::VectorXd &u,
+                                     const Eigen::VectorXd &x) {
+  static const double delta = 1e-4;
+
+  return (problem_ptr_->GetGradient(x + delta * u / 2.0) -
+          problem_ptr_->GetGradient(x - delta * u / 2.0)) /
+         delta;
 }
 
 void Solver::DebugInfo() {

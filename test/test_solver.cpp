@@ -10,9 +10,9 @@ using namespace matplotlibcpp;
 
 int main() {
 
-  shared_ptr<Solver> solver_ptr = make_shared<QuasiNewtonsMethod>();
+  shared_ptr<Solver> solver_ptr = make_shared<NetonCGMethod>();
 
-  auto problem_type = ProblemType::Example3;
+  auto problem_type = ProblemType::Example2;
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;
@@ -31,7 +31,8 @@ int main() {
     break;
   }
 
-  x << -0.5, -0.5;
+  x.setOnes();
+  x = x * (-0.5);
 
   auto t_start = std::chrono::system_clock::now();
   x = solver_ptr->Solve(x);
