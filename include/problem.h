@@ -11,6 +11,7 @@ enum ProblemType {
   Example1,
   Example2,
   Example3,
+  Example4,
   PRosenbrock,
 };
 
@@ -61,6 +62,16 @@ public:
   Example3Func() { size_ = 2; }
   double GetCost(const Eigen::VectorXd &x) override;
   Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
+  // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
+
+private:
+};
+
+class Example4Func : public Problem {
+public:
+  Example4Func() { size_ = 2; }
+  double GetCost(const Eigen::VectorXd &x) override;
+  // Eigen::VectorXd GetGradient(const Eigen::VectorXd &x) override;
   // Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x) override;
 
 private:

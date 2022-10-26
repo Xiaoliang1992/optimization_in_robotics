@@ -1,4 +1,5 @@
 #include "problem.h"
+#include "Eigen/src/Core/Matrix.h"
 #include <cmath>
 #include <cstddef>
 
@@ -128,6 +129,18 @@ Eigen::VectorXd Example3Func::GetGradient(const Eigen::VectorXd &x) {
     g << -2.0 + 4.0 * x(0), -1.0;
   }
   return g;
+}
+
+// example4: nonsmooth
+double Example4Func::GetCost(const Eigen::VectorXd &x) {
+  Eigen::Matrix2d P;
+  P << 1.0, 0.0, 0.0, 5.0;
+  Eigen::Vector2d q;
+  q << 1.0, -0.5;
+
+  double y = 0.5 * x.transpose() * P * x + q.dot(x);
+
+  return y;
 }
 
 } // namespace optimization_solver

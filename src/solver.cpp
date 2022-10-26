@@ -38,6 +38,9 @@ void Solver::SetProblem(const ProblemType &type) {
   case ProblemType::Example3:
     problem_ptr_ = std::make_shared<Example3Func>();
     break;
+  case ProblemType::Example4:
+    problem_ptr_ = std::make_shared<Example4Func>();
+    break;
   }
 }
 

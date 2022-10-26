@@ -12,7 +12,7 @@ int main() {
 
   shared_ptr<Solver> solver_ptr = make_shared<NetonCGMethod>();
 
-  auto problem_type = ProblemType::Example2;
+  auto problem_type = ProblemType::Example4;
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;
@@ -27,6 +27,9 @@ int main() {
     x.resize(2);
     break;
   case ProblemType::Example3:
+    x.resize(2);
+    break;
+  case ProblemType::Example4:
     x.resize(2);
     break;
   }
