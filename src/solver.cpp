@@ -1,10 +1,10 @@
 #include "solver.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "problem.h"
 #include <Eigen/Cholesky>
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -16,10 +16,47 @@ static const double kMinimumStep = 1e-8;
 using namespace std;
 namespace optimization_solver {
 
-// solver base
-void Solver::SetParam(const SolverParameters &param) { param_ = param; }
+// solver
+void Solver::SetSolver(const SolverType &type) {
+  switch (type) {
+  case TGradientDescent:
+    solver_ptr_ = std::make_shared<optimization_solver::GradientDescent>();
+    break;
+  case TNewtonsMethod:
+    solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
+    break;
+  case TQuasiNewtonsMethod:
+    solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
+    break;
+  case TNetonCGMethod:
+    solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
+    break;
+  }
+  solver_setflag_ = true;
+}
 
 void Solver::SetProblem(const ProblemType &type) {
+  if (!solver_setflag_) {
+    cout << "Please set solver type before set problem type!" << endl;
+    return;
+  }
+
+  solver_ptr_->SetProblem(type);
+  problem_setflag_ = true;
+}
+
+void Solver::SetParam(const SolverParameters &param) {
+  solver_ptr_->SetParam(param);
+}
+
+Eigen::VectorXd Solver::Solve(const Eigen::VectorXd &x0) {
+  return solver_ptr_->Solve(x0);
+}
+
+// solver base
+void SolverBase::SetParam(const SolverParameters &param) { param_ = param; }
+
+void SolverBase::SetProblem(const ProblemType &type) {
   switch (type) {
   case ProblemType::PRosenbrock:
     if (kRosenbrockN % 2 > 0) {
@@ -42,11 +79,14 @@ void Solver::SetProblem(const ProblemType &type) {
     problem_ptr_ = std::make_shared<Example4Func>();
     break;
   }
+
+  info_.problem_size = problem_ptr_->GetProblemSize();
 }
 
-double Solver::LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
-                          const Eigen::VectorXd &g,
-                          const SolverParameters &param) {
+double SolverBase::LineSearch(const Eigen::VectorXd &d,
+                              const Eigen::VectorXd &x,
+                              const Eigen::VectorXd &g,
+                              const SolverParameters &param) {
   double t = param.t0;
   double f0 = problem_ptr_->GetCost(x);
   double f1 = problem_ptr_->GetCost(x + t * d);
@@ -102,9 +142,10 @@ double Solver::LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
   return t;
 }
 
-double Solver::LOLineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
-                            const Eigen::VectorXd &g,
-                            const SolverParameters &param) {
+double SolverBase::LOLineSearch(const Eigen::VectorXd &d,
+                                const Eigen::VectorXd &x,
+                                const Eigen::VectorXd &g,
+                                const SolverParameters &param) {
 
   double t = param.t0;
   double f0 = problem_ptr_->GetCost(x);
@@ -152,9 +193,9 @@ double Solver::LOLineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
   return t;
 }
 
-Eigen::VectorXd Solver::BFGS(const Eigen::VectorXd &dx,
-                             const Eigen::VectorXd &g,
-                             const Eigen::VectorXd &dg) {
+Eigen::VectorXd SolverBase::BFGS(const Eigen::VectorXd &dx,
+                                 const Eigen::VectorXd &g,
+                                 const Eigen::VectorXd &dg) {
   Eigen::MatrixXd eye;
   eye.setIdentity(dx.size(), dx.size());
 
@@ -174,9 +215,9 @@ Eigen::VectorXd Solver::BFGS(const Eigen::VectorXd &dx,
   return d;
 }
 
-Eigen::VectorXd Solver::LBFGS(const Eigen::VectorXd &dx,
-                              const Eigen::VectorXd &g,
-                              const Eigen::VectorXd &dg) {
+Eigen::VectorXd SolverBase::LBFGS(const Eigen::VectorXd &dx,
+                                  const Eigen::VectorXd &g,
+                                  const Eigen::VectorXd &dg) {
   Eigen::VectorXd d = -g;
   while (dx_vec_.size() >= param_.m) {
     dx_vec_.pop_front();
@@ -217,7 +258,7 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
   x_ = x0;
   iter_ = 0;
 
-  for (int i = 0; i < param_.max_iter; ++i) {
+  for (size_t i = 0; i < param_.max_iter; ++i) {
     iter_++;
     t_ = param_.t0;
     g_ = problem_ptr_->GetGradient(x_);
@@ -236,6 +277,7 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
     // info
     info_.obj_val.push_back(std::log10(g_.norm()));
     info_.iter_vec.push_back(iter_);
+    info_.iter = iter_;
   }
 
   return x_;
@@ -246,7 +288,7 @@ Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
   x_ = x0;
   iter_ = 0;
 
-  for (int i = 0; i < param_.max_iter; ++i) {
+  for (size_t i = 0; i < param_.max_iter; ++i) {
     iter_++;
     g_ = problem_ptr_->GetGradient(x_);
     H_ = problem_ptr_->GetHessian(x_);
@@ -270,6 +312,7 @@ Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
       break;
     }
   }
+  info_.iter = iter_;
 
   return x_;
 }
@@ -312,6 +355,7 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
       break;
     }
   }
+  info_.iter = iter_;
 
   return x_;
 }
@@ -389,6 +433,7 @@ Eigen::VectorXd NetonCGMethod::Solve(const Eigen::VectorXd &x0) {
       break;
     }
   }
+  info_.iter = iter_;
 
   return x_;
 }
@@ -402,7 +447,7 @@ Eigen::VectorXd NetonCGMethod::Gamau(const Eigen::VectorXd &u,
          delta;
 }
 
-void Solver::DebugInfo() {
+void SolverBase::DebugInfo() {
 #ifdef SOLVER_DEBUG
   std::cout << "----------------------- iter = " << iter_
             << "-----------------------" << endl

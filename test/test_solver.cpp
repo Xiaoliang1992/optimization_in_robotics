@@ -9,30 +9,16 @@ using namespace optimization_solver;
 using namespace matplotlibcpp;
 
 int main() {
-
-  shared_ptr<Solver> solver_ptr = make_shared<NetonCGMethod>();
-
+  auto solver_type = SolverType::TNetonCGMethod;
   auto problem_type = ProblemType::Example4;
+
+  shared_ptr<Solver> solver_ptr = make_shared<Solver>();
+
+  solver_ptr->SetSolver(solver_type);
   solver_ptr->SetProblem(problem_type);
 
   Eigen::VectorXd x;
-  switch (problem_type) {
-  case ProblemType::PRosenbrock:
-    x.resize(kRosenbrockN);
-    break;
-  case ProblemType::Example1:
-    x.resize(2);
-    break;
-  case ProblemType::Example2:
-    x.resize(2);
-    break;
-  case ProblemType::Example3:
-    x.resize(2);
-    break;
-  case ProblemType::Example4:
-    x.resize(2);
-    break;
-  }
+  x.resize(solver_ptr->GetInfoPtr()->problem_size);
 
   x.setOnes();
   x = x * (-0.5);
@@ -47,7 +33,7 @@ int main() {
   double t_cost = elapsed / 1e6;
 
   cout << "solution = \n"
-       << x << "\niter = " << solver_ptr->GetIter()
+       << x << "\niter = " << solver_ptr->GetInfoPtr()->iter
        << ", \ntime cost = " << t_cost << " ms" << endl;
 
   figure();

@@ -1,6 +1,7 @@
 #ifndef __PROBLEM_H__
 #define __PROBLEM_H__
 
+#include <cstddef>
 #include <eigen3/Eigen/Core>
 #include <iostream>
 
@@ -22,6 +23,7 @@ public:
   virtual Eigen::MatrixXd GetHessian(const Eigen::VectorXd &x);
   virtual Eigen::VectorXd GetDiffGradient(const Eigen::VectorXd &x) final;
   virtual Eigen::MatrixXd GetDiffHessian(const Eigen::VectorXd &x) final;
+  virtual std::size_t GetProblemSize() final { return size_; }
 
 protected:
   int size_ = 0;

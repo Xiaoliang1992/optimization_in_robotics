@@ -2,6 +2,7 @@
 #define __SOLVER_H__
 
 #include "problem.h"
+#include <cstddef>
 #include <deque>
 #include <eigen3/Eigen/Core>
 #include <iostream>
@@ -10,7 +11,10 @@
 
 namespace optimization_solver {
 enum SolverType {
-  MGradientDescent = 0,
+  TGradientDescent,
+  TNewtonsMethod,
+  TQuasiNewtonsMethod,
+  TNetonCGMethod,
 };
 
 enum LineSearchMethod {
@@ -20,7 +24,7 @@ enum LineSearchMethod {
 };
 
 struct SolverParameters {
-  int max_iter = 80;                              // max iteration time
+  size_t max_iter = 80;                           // max iteration time
   uint8_t linesearch_method = WolfeWeakCondition; // line search method
   double c1 = 0.0001;                             // c1
   double c2 = 0.9;                                // c2
@@ -28,10 +32,10 @@ struct SolverParameters {
   double terminate_threshold = 1e-6; // iteration terminate threshold
   uint16_t m = 30;                   // LBFGS memory size
 };
-
 // solver base
-
 struct SolverDebugInfo {
+  size_t iter = 0;         // iter time
+  size_t problem_size = 0; // problem size
   std::vector<Eigen::VectorXd> x_vec;
   std::vector<Eigen::VectorXd> dx_vec;
   std::vector<Eigen::VectorXd> g_vec;
@@ -40,7 +44,7 @@ struct SolverDebugInfo {
   std::vector<int> iter_vec;
 };
 
-class Solver {
+class SolverBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   virtual void SetProblem(const ProblemType &type) final;
@@ -65,7 +69,10 @@ public:
   virtual Eigen::VectorXd Getx() final { return x_; }
   virtual Eigen::VectorXd Getg() final { return g_; }
   virtual SolverDebugInfo *GetInfoPtr() final { return &info_; }
-  virtual int GetIter() final { return iter_; }
+  virtual std::shared_ptr<Problem> GetProblemPtr() final {
+    return problem_ptr_;
+  }
+
   void DebugInfo();
 
 protected:
@@ -88,37 +95,52 @@ protected:
 
   double f_; // cost
   double alpha_ = 0.0;
-  double t_ = 0.0; // step size
-  int iter_ = 0;   // iter time
+  double t_ = 0.0;  // step size
+  size_t iter_ = 0; // iter
 
   SolverDebugInfo info_; // debug info
 };
 
 // line-search steepest gradient descent with Armijo condition
-class GradientDescent : public Solver {
+class GradientDescent : public SolverBase {
 public:
   GradientDescent() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
 };
 
 // NewtonsMethod with linesearch
-class NewtonsMethod : public Solver {
+class NewtonsMethod : public SolverBase {
 public:
   NewtonsMethod() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
 };
 
-class QuasiNewtonsMethod : public Solver {
+class QuasiNewtonsMethod : public SolverBase {
 public:
   QuasiNewtonsMethod() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
 };
 
-class NetonCGMethod : public Solver {
+class NetonCGMethod : public SolverBase {
 public:
   NetonCGMethod() {}
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0) override;
   Eigen::VectorXd Gamau(const Eigen::VectorXd &u, const Eigen::VectorXd &x);
+};
+
+// solver class
+class Solver {
+public:
+  void SetSolver(const SolverType &type);
+  void SetProblem(const ProblemType &type);
+  void SetParam(const SolverParameters &param);
+  Eigen::VectorXd Solve(const Eigen::VectorXd &x0);
+  SolverDebugInfo *GetInfoPtr() { return solver_ptr_->GetInfoPtr(); }
+
+private:
+  std::shared_ptr<SolverBase> solver_ptr_;
+  bool problem_setflag_ = false;
+  bool solver_setflag_ = false;
 };
 
 } // namespace optimization_solver
