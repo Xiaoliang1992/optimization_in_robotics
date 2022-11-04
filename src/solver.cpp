@@ -9,15 +9,13 @@
 #include <memory>
 #include <vector>
 
-#define SOLVER_DEBUG
-
 static const double kMinimumStep = 1e-8;
 
 using namespace std;
 namespace optimization_solver {
 
 // solver
-void Solver::SetSolver(const SolverType &type) {
+void Solver::SetSolver(const uint8_t &type) {
   switch (type) {
   case TGradientDescent:
     solver_ptr_ = std::make_shared<optimization_solver::GradientDescent>();
@@ -26,16 +24,17 @@ void Solver::SetSolver(const SolverType &type) {
     solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
     break;
   case TQuasiNewtonsMethod:
-    solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
+    solver_ptr_ = std::make_shared<optimization_solver::QuasiNewtonsMethod>();
     break;
   case TNetonCGMethod:
-    solver_ptr_ = std::make_shared<optimization_solver::NewtonsMethod>();
+    solver_ptr_ = std::make_shared<optimization_solver::NetonCGMethod>();
     break;
   }
+  solver_ptr_->GetInfoPtr()->Clear();
   solver_setflag_ = true;
 }
 
-void Solver::SetProblem(const ProblemType &type) {
+void Solver::SetProblem(const uint8_t &type) {
   if (!solver_setflag_) {
     cout << "Please set solver type before set problem type!" << endl;
     return;
@@ -56,7 +55,7 @@ Eigen::VectorXd Solver::Solve(const Eigen::VectorXd &x0) {
 // solver base
 void SolverBase::SetParam(const SolverParameters &param) { param_ = param; }
 
-void SolverBase::SetProblem(const ProblemType &type) {
+void SolverBase::SetProblem(const uint8_t &type) {
   switch (type) {
   case ProblemType::PRosenbrock:
     if (kRosenbrockN % 2 > 0) {
@@ -219,7 +218,7 @@ Eigen::VectorXd SolverBase::LBFGS(const Eigen::VectorXd &dx,
                                   const Eigen::VectorXd &g,
                                   const Eigen::VectorXd &dg) {
   Eigen::VectorXd d = -g;
-  while (dx_vec_.size() >= param_.m) {
+  while (dx_vec_.size() >= param_.m_size) {
     dx_vec_.pop_front();
     dg_vec_.pop_front();
     rho_vec_.pop_front();
@@ -230,7 +229,7 @@ Eigen::VectorXd SolverBase::LBFGS(const Eigen::VectorXd &dx,
   rho_vec_.emplace_back(1.0 / std::max(dx.dot(dg), kMinimumStep));
 
   static std::vector<double> alpha_vec;
-  alpha_vec.resize(param_.m);
+  alpha_vec.resize(param_.m_size);
 
   int k = dx_vec_.size();
 
@@ -265,7 +264,7 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
 
     d_ = -g_;
     t_ = LineSearch(d_, x_, g_, param_);
-
+    f_ = problem_ptr_->GetCost(x_);
     DebugInfo();
 
     dx_ = t_ * d_;
@@ -273,11 +272,6 @@ Eigen::VectorXd GradientDescent::Solve(const Eigen::VectorXd &x0) {
     if (dx_.norm() < param_.terminate_threshold) {
       break;
     }
-
-    // info
-    info_.obj_val.push_back(std::log10(g_.norm()));
-    info_.iter_vec.push_back(iter_);
-    info_.iter = iter_;
   }
 
   return x_;
@@ -298,15 +292,12 @@ Eigen::VectorXd NewtonsMethod::Solve(const Eigen::VectorXd &x0) {
 
     d_ = M_.llt().solve(-g_);
     t_ = LineSearch(d_, x_, g_, param_);
+    f_ = problem_ptr_->GetCost(x_);
 
     DebugInfo();
 
     dx_ = t_ * d_;
     x_ += dx_;
-
-    // info
-    info_.obj_val.push_back(std::log10(g_.norm()));
-    info_.iter_vec.push_back(iter_);
 
     if (g_.norm() < param_.terminate_threshold) {
       break;
@@ -342,14 +333,10 @@ Eigen::VectorXd QuasiNewtonsMethod::Solve(const Eigen::VectorXd &x0) {
 
     f_ = problem_ptr_->GetCost(x_);
 
-    // d_ = BFGS(dx_, g_, dg_);
-    d_ = LBFGS(dx_, g_, dg_);
+    d_ = BFGS(dx_, g_, dg_);
+    // d_ = LBFGS(dx_, g_, dg_);
 
     DebugInfo();
-
-    // info
-    info_.obj_val.push_back(std::log10(g_.norm()));
-    info_.iter_vec.push_back(iter_);
 
     if (iter_ >= param_.max_iter) {
       break;
@@ -367,8 +354,6 @@ Eigen::VectorXd NetonCGMethod::Solve(const Eigen::VectorXd &x0) {
   f_ = problem_ptr_->GetCost(x_);
   g_ = problem_ptr_->GetGradient(x_);
 
-  DebugInfo();
-
   Eigen::VectorXd d(x_.size());
   Eigen::VectorXd v(x_.size());
   Eigen::VectorXd v1(x_.size());
@@ -383,6 +368,8 @@ Eigen::VectorXd NetonCGMethod::Solve(const Eigen::VectorXd &x0) {
     u = v;
     j = 1;
 
+    DebugInfo();
+    
     while (v.norm() > e * g_.norm()) {
       if (u.transpose() * Gamau(u, x_) <= 0.0) {
         if (j == 1) {
@@ -427,7 +414,6 @@ Eigen::VectorXd NetonCGMethod::Solve(const Eigen::VectorXd &x0) {
 
     f_ = problem_ptr_->GetCost(x_);
     g_ = problem_ptr_->GetGradient(x_);
-    DebugInfo();
 
     if (iter_ >= param_.max_iter) {
       break;
@@ -448,16 +434,22 @@ Eigen::VectorXd NetonCGMethod::Gamau(const Eigen::VectorXd &u,
 }
 
 void SolverBase::DebugInfo() {
-#ifdef SOLVER_DEBUG
-  std::cout << "----------------------- iter = " << iter_
-            << "-----------------------" << endl
-            << "t = " << t_ << ",\nd = " << d_ << endl
-            << "f = " << f_ << endl
-            << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
-            << "g = \n"
-            << g_ << "\nx = \n"
-            << x_ << std::endl;
-#endif
+  // info
+  info_.g_norm_vec.push_back(std::log10(g_.norm()));
+  info_.cost_vec.push_back(f_);
+  info_.iter_vec.push_back(iter_);
+  info_.x_vec.push_back(x_);
+  info_.iter = iter_;
+  if (param_.debug_enable) {
+    std::cout << "----------------------- iter = " << iter_
+              << "-----------------------" << endl
+              << "t = " << t_ << ",\nd = " << d_ << endl
+              << "f = " << f_ << endl
+              << ", g_norm = " << g_.norm() << ", alpha = " << alpha_ << ":\n"
+              << "g = \n"
+              << g_ << "\nx = \n"
+              << x_ << std::endl;
+  }
 }
 
 } // namespace optimization_solver

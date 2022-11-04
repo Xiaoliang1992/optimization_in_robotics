@@ -5,9 +5,10 @@ set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(PYBIND11_PYTHON_VERSION 3.9)
 
 find_package(Eigen3 REQUIRED)
-find_package(PythonLibs REQUIRED)
+find_package(pybind11 REQUIRED PATHS ~/miniconda3/lib/python3.9/site-packages/pybind11/share/cmake/pybind11)
 
 include_directories(
   ${EIGEN3_INCLUDE_DIRS}
@@ -18,10 +19,15 @@ file(GLOB_RECURSE CPP_FILES src/*.cpp)
 
 add_library (${PROJECT_NAME} SHARED ${CPP_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE)
+target_compile_options(${PROJECT_NAME} PRIVATE -fPIC)
 
 add_executable(test_problem ${CMAKE_CURRENT_LIST_DIR}/test/test_problem.cpp)
 target_link_libraries(test_problem PRIVATE ${PROJECT_NAME})
 
 add_executable(test_solver ${CMAKE_CURRENT_LIST_DIR}/test/test_solver.cpp)
 target_link_libraries(test_solver PRIVATE ${PROJECT_NAME} ${PYTHON_LIBRARIES})
+
+# pybind
+pybind11_add_module(solver_py MODULE jupyter_pybind/pybind.cpp)
+target_link_libraries(solver_py PRIVATE ${PROJECT_NAME})
 

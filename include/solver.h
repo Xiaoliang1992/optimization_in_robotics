@@ -3,6 +3,7 @@
 
 #include "problem.h"
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <eigen3/Eigen/Core>
 #include <iostream>
@@ -25,12 +26,13 @@ enum LineSearchMethod {
 
 struct SolverParameters {
   size_t max_iter = 80;                           // max iteration time
-  uint8_t linesearch_method = WolfeWeakCondition; // line search method
+  uint8_t linesearch_method = ArmijoCondition; // line search method
   double c1 = 0.0001;                             // c1
   double c2 = 0.9;                                // c2
   double t0 = 1.0;                                // init step size
   double terminate_threshold = 1e-6; // iteration terminate threshold
-  uint16_t m = 30;                   // LBFGS memory size
+  uint16_t m_size = 30;              // LBFGS memory size
+  bool debug_enable = false;         // debug flag
 };
 // solver base
 struct SolverDebugInfo {
@@ -40,14 +42,26 @@ struct SolverDebugInfo {
   std::vector<Eigen::VectorXd> dx_vec;
   std::vector<Eigen::VectorXd> g_vec;
   std::vector<double> tau_vec;
-  std::vector<double> obj_val;
+  std::vector<double> g_norm_vec;
+  std::vector<double> cost_vec;
   std::vector<int> iter_vec;
+
+  void Clear() {
+    iter = 0;
+    problem_size = 0;
+    x_vec.clear();
+    g_vec.clear();
+    tau_vec.clear();
+    g_norm_vec.clear();
+    cost_vec.clear();
+    iter_vec.clear();
+  }
 };
 
 class SolverBase {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  virtual void SetProblem(const ProblemType &type) final;
+  virtual void SetProblem(const uint8_t &type) final;
   virtual void SetParam(const SolverParameters &param) final;
   virtual double LineSearch(const Eigen::VectorXd &d, const Eigen::VectorXd &x,
                             const Eigen::VectorXd &g,
@@ -72,6 +86,8 @@ public:
   virtual std::shared_ptr<Problem> GetProblemPtr() final {
     return problem_ptr_;
   }
+
+  // for debug
 
   void DebugInfo();
 
@@ -131,11 +147,12 @@ public:
 // solver class
 class Solver {
 public:
-  void SetSolver(const SolverType &type);
-  void SetProblem(const ProblemType &type);
+  void SetSolver(const uint8_t &type);
+  void SetProblem(const uint8_t &type);
   void SetParam(const SolverParameters &param);
   Eigen::VectorXd Solve(const Eigen::VectorXd &x0);
   SolverDebugInfo *GetInfoPtr() { return solver_ptr_->GetInfoPtr(); }
+  SolverDebugInfo GetInfo() { return *solver_ptr_->GetInfoPtr(); }
 
 private:
   std::shared_ptr<SolverBase> solver_ptr_;
