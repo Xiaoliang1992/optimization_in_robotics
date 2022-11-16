@@ -5,7 +5,7 @@
           "name": "(lldb) Launch",
           "type": "lldb",
           "request": "launch",
-          "program": "${workspaceFolder}/build/test_solver", // to be debugged
+          "program": "${workspaceFolder}/build/test_spline_problem", // to be debugged
           "args": [],
           "stopAtEntry": false,
           "cwd": "${workspaceFolder}/build",

@@ -27,6 +27,12 @@ target_link_libraries(test_problem PRIVATE ${PROJECT_NAME})
 add_executable(test_solver ${CMAKE_CURRENT_LIST_DIR}/test/test_solver.cpp)
 target_link_libraries(test_solver PRIVATE ${PROJECT_NAME} ${PYTHON_LIBRARIES})
 
+add_executable(test_spline_path2d ${CMAKE_CURRENT_LIST_DIR}/test/test_spline_path2d.cpp)
+target_link_libraries(test_spline_path2d PRIVATE ${PROJECT_NAME} ${PYTHON_LIBRARIES})
+
+add_executable(test_spline_problem ${CMAKE_CURRENT_LIST_DIR}/test/test_spline_problem.cpp)
+target_link_libraries(test_spline_problem PRIVATE ${PROJECT_NAME} ${PYTHON_LIBRARIES})
+
 # pybind
 pybind11_add_module(solver_py MODULE jupyter_pybind/pybind.cpp)
 target_link_libraries(solver_py PRIVATE ${PROJECT_NAME})
